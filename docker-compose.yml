@@ -1,0 +1,69 @@
+services:
+
+  # -------------------------------------------------------------------------
+  # PostgreSQL 17 with the wal2json logical decoding plugin
+  # -------------------------------------------------------------------------
+  postgres:
+    build: ./postgres
+    environment:
+      POSTGRES_DB:       testdb
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    # Enable logical replication and allocate enough senders / slots
+    command: >
+      postgres
+        -c wal_level=logical
+        -c max_replication_slots=10
+        -c max_wal_senders=10
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # -------------------------------------------------------------------------
+  # Consumer – opens a logical replication slot and streams WAL changes
+  # -------------------------------------------------------------------------
+  consumer:
+    build: ./python
+    command: python consumer.py
+    environment:
+      PGHOST:     postgres
+      PGPORT:     "5432"
+      PGDATABASE: testdb
+      PGUSER:     postgres
+      PGPASSWORD: postgres
+      SLOT_NAME:  wal2json_slot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # -------------------------------------------------------------------------
+  # Producer – continuously INSERTs / UPDATEs / DELETEs rows
+  # Start manually:  docker compose run --rm producer
+  # Or add to the default profile by removing the `profiles` key below.
+  # -------------------------------------------------------------------------
+  producer:
+    build: ./python
+    command: python producer.py
+    environment:
+      PGHOST:           postgres
+      PGPORT:           "5432"
+      PGDATABASE:       testdb
+      PGUSER:           postgres
+      PGPASSWORD:       postgres
+      CHANGE_INTERVAL:  "2"   # seconds between operations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - producer
+
+volumes:
+  pg_data:

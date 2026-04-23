@@ -6,40 +6,40 @@
     <title>Wal2JSON Live Stats</title>
     <style>
       :root {
-        --bg: radial-gradient(circle at 20% 20%, #18323c 0%, #0d1a1f 45%, #070e11 100%);
-        --panel: rgba(17, 29, 35, 0.8);
-        --accent: #7ee0ff;
-        --text: #e8f6fb;
-        --muted: #9eb5bf;
-        --ok: #37c27f;
+        --half-height: 0.72em;
+        --border-radius: 0.15em;
+        --text: #1f2428;
+        --muted: #5f6b76;
+        --ok: #2f9f67;
       }
 
-      * { box-sizing: border-box; }
+      html { height: 100%; }
 
       body {
         margin: 0;
-        min-height: 100vh;
-        background: var(--bg);
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #eee;
         color: var(--text);
         font-family: "Avenir Next", "Segoe UI", sans-serif;
-        display: grid;
-        place-items: center;
         padding: 20px;
       }
 
       .wrap {
-        width: min(980px, 100%);
-        background: var(--panel);
-        border: 1px solid rgba(126, 224, 255, 0.2);
+        width: 100%;
+        background: #f8f8f8;
+        border: 1px solid #d7d7d7;
         border-radius: 18px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
         overflow: hidden;
       }
 
       .head {
         padding: 22px 24px;
-        border-bottom: 1px solid rgba(126, 224, 255, 0.15);
+        border-bottom: 1px solid #dfdfdf;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -69,24 +69,21 @@
 
       .status.live .dot {
         background: var(--ok);
-        box-shadow: 0 0 10px rgba(55, 194, 127, 0.8);
+        box-shadow: 0 0 10px rgba(47, 159, 103, 0.45);
       }
 
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
         gap: 14px;
         padding: 18px;
       }
 
-      .card {
+      .stat-card {
         border-radius: 14px;
         padding: 14px;
-        background: linear-gradient(145deg, rgba(18, 40, 49, 0.8), rgba(9, 24, 29, 0.85));
-        border: 1px solid rgba(126, 224, 255, 0.15);
-        transform: translateY(8px);
-        opacity: 0;
-        animation: reveal 400ms ease forwards;
+        background: #f3f3f3;
+        border: 1px solid #dddddd;
       }
 
       .name {
@@ -96,21 +93,198 @@
         font-size: 0.75rem;
       }
 
-      .count {
-        font-size: clamp(1.6rem, 4vw, 2.2rem);
-        margin: 8px 0 0;
-        font-weight: 700;
+      .flip-clock {
+        text-align: center;
+        perspective: 400px;
+        margin: 10px 0 0;
+      }
+
+      .flip-clock,
+      .flip-clock *,
+      .flip-clock *:before,
+      .flip-clock *:after {
+        box-sizing: border-box;
+      }
+
+      .flip-clock__piece {
+        display: inline-block;
+        margin: 0 3px;
+      }
+
+      .flip-clock__slot {
+        font-size: 1.6vw;
+      }
+
+      .flip-clock .card {
+        display: block;
+        position: relative;
+        padding-bottom: var(--half-height);
+        font-size: clamp(1.35rem, 3.8vw, 2rem);
+        line-height: 0.95;
+      }
+
+      .card__top,
+      .card__bottom,
+      .card__back::before,
+      .card__back::after {
+        display: block;
+        height: var(--half-height);
+        color: #ccc;
+        background: #222;
+        padding: 0.25em 0.25em;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        backface-visibility: hidden;
+        transform-style: preserve-3d;
+        width: 1.55em;
+        transform: translateZ(0);
+        overflow: hidden;
+      }
+
+      .card__bottom {
+        color: #fff;
+        position: absolute;
+        top: 50%;
+        left: 0;
+        border-top: solid 1px #000;
+        background: #393939;
+        border-radius: 0 0 var(--border-radius) var(--border-radius);
+        pointer-events: none;
+      }
+
+      .card__bottom::after {
+        display: block;
+        margin-top: calc(-1 * var(--half-height));
+      }
+
+      .card__back::before,
+      .card__bottom::after {
+        content: attr(data-value);
+      }
+
+      .card__back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .card__back::before {
+        position: relative;
+        z-index: -1;
+      }
+
+      .flip .card__back::before {
+        animation: flipTop 0.3s cubic-bezier(.37,.01,.94,.35);
+        animation-fill-mode: both;
+        transform-origin: top center;
+      }
+
+      .flip .card__back .card__bottom {
+        transform-origin: center top;
+        animation-fill-mode: both;
+        animation: flipBottom 0.6s cubic-bezier(.15,.45,.28,1);
       }
 
       .foot {
-        border-top: 1px solid rgba(126, 224, 255, 0.15);
+        border-top: 1px solid #dfdfdf;
         padding: 12px 18px;
         color: var(--muted);
         font-size: 0.85rem;
       }
 
-      @keyframes reveal {
-        to { transform: translateY(0); opacity: 1; }
+      @keyframes flipTop {
+        0% {
+          transform: rotateX(0deg);
+          z-index: 2;
+        }
+        0%, 99% {
+          opacity: 0.99;
+        }
+        100% {
+          transform: rotateX(-90deg);
+          opacity: 0;
+        }
+      }
+
+      @keyframes flipBottom {
+        0%, 50% {
+          z-index: -1;
+          transform: rotateX(90deg);
+          opacity: 0;
+        }
+        51% {
+          opacity: 0.99;
+        }
+        100% {
+          opacity: 0.99;
+          transform: rotateX(0deg);
+          z-index: 5;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .head {
+          padding: 16px 16px;
+        }
+
+        .cards {
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .stat-card {
+          padding: 10px;
+        }
+
+        .flip-clock__slot {
+          font-size: 2.8vw;
+        }
+
+        .flip-clock__piece {
+          margin: 0 2px;
+        }
+
+        .flip-clock .card {
+          font-size: clamp(1.05rem, 5.2vw, 1.5rem);
+        }
+
+        .card__top,
+        .card__bottom,
+        .card__back::before,
+        .card__back::after {
+          width: 1.45em;
+        }
+      }
+
+      @media (max-width: 420px) {
+        body {
+          padding: 10px;
+        }
+
+        h1 {
+          font-size: 1rem;
+        }
+
+        .status {
+          font-size: 0.8rem;
+        }
+
+        .cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .flip-clock .card {
+          font-size: clamp(0.92rem, 4.8vw, 1.2rem);
+        }
+
+        .card__top,
+        .card__bottom,
+        .card__back::before,
+        .card__back::after {
+          width: 1.35em;
+        }
       }
     </style>
   </head>
@@ -132,24 +306,137 @@
       const cardsEl = document.getElementById("cards");
       const lastEl = document.getElementById("last");
       const connEl = document.getElementById("conn");
+      const cardByStatus = new Map();
 
       function setConn(connected) {
         connEl.classList.toggle("live", connected);
         connEl.innerHTML = `<span class="dot"></span>${connected ? "live" : "reconnecting"}`;
       }
 
-      function renderStats(stats) {
-        cardsEl.innerHTML = "";
+      function createCard(status, orderCount, index) {
+        const card = document.createElement("article");
+        card.className = "stat-card";
+        card.dataset.status = status;
+        card.innerHTML = `
+          <div class="name">${status}</div>
+          <div class="flip-clock"></div>
+        `;
 
-        stats.forEach((row, i) => {
-          const card = document.createElement("article");
-          card.className = "card";
-          card.style.animationDelay = `${i * 50}ms`;
-          card.innerHTML = `
-            <div class="name">${row.status}</div>
-            <div class="count">${row.order_count}</div>
-          `;
-          cardsEl.appendChild(card);
+        const flip = card.querySelector(".flip-clock");
+        const valueText = String(orderCount);
+        const slots = buildDigitSlots(valueText);
+        slots.forEach((slot) => flip.appendChild(slot.el));
+
+        return { card, flip, slots, value: Number(orderCount), valueText };
+      }
+
+      function createDigitSlot(ch) {
+        const el = document.createElement("div");
+        el.className = "flip-clock__piece";
+        el.innerHTML = `
+          <div class="flip-clock__slot"></div>
+          <div class="card">
+            <div class="card__top"></div>
+            <div class="card__bottom" data-value=""></div>
+            <div class="card__back" data-value="">
+              <div class="card__bottom" data-value=""></div>
+            </div>
+          </div>
+        `;
+
+        const topStatic = el.querySelector(".card__top");
+        const bottomStatic = el.querySelector(".card > .card__bottom");
+        const back = el.querySelector(".card__back");
+        const backBottom = el.querySelector(".card__back .card__bottom");
+
+        topStatic.textContent = ch;
+        bottomStatic.dataset.value = ch;
+        back.dataset.value = ch;
+        backBottom.dataset.value = ch;
+
+        return { el, topStatic, bottomStatic, back, backBottom, value: ch };
+      }
+
+      function buildDigitSlots(valueText) {
+        return valueText.split("").map((ch) => createDigitSlot(ch));
+      }
+
+      function animateSlot(slot, nextChar) {
+        if (slot.value === nextChar) {
+          return;
+        }
+
+        const oldChar = slot.value;
+        slot.topStatic.textContent = oldChar;
+        slot.bottomStatic.dataset.value = oldChar;
+        slot.back.dataset.value = oldChar;
+        slot.backBottom.dataset.value = nextChar;
+
+        slot.el.classList.remove("flip");
+        void slot.el.offsetWidth;
+        slot.el.classList.add("flip");
+
+        slot.el.addEventListener("animationend", () => {
+          slot.topStatic.textContent = nextChar;
+          slot.bottomStatic.dataset.value = nextChar;
+          slot.back.dataset.value = nextChar;
+          slot.backBottom.dataset.value = nextChar;
+          slot.el.classList.remove("flip");
+          slot.value = nextChar;
+        }, { once: true });
+      }
+
+      function animateTo(entry, nextValue) {
+        const nextText = String(nextValue);
+        if (entry.valueText === nextText) {
+          return;
+        }
+
+        if (entry.slots.length !== nextText.length) {
+          entry.flip.innerHTML = "";
+          entry.slots = buildDigitSlots(entry.valueText.padStart(nextText.length, "0").slice(-nextText.length));
+          entry.slots.forEach((slot) => entry.flip.appendChild(slot.el));
+        }
+
+        const nextChars = nextText.padStart(entry.slots.length, "0").split("");
+        entry.slots.forEach((slot, i) => animateSlot(slot, nextChars[i]));
+
+        entry.value = nextValue;
+        entry.valueText = nextText;
+      }
+
+      function renderStats(stats) {
+        const seen = new Set();
+
+        stats.forEach((row) => {
+          const status = String(row.status);
+          const nextValue = Number(row.order_count);
+          seen.add(status);
+
+          let entry = cardByStatus.get(status);
+          if (!entry) {
+            entry = createCard(status, nextValue);
+            cardByStatus.set(status, entry);
+            cardsEl.appendChild(entry.card);
+          } else {
+            animateTo(entry, nextValue);
+          }
+        });
+
+        // Remove statuses no longer returned by API.
+        cardByStatus.forEach((entry, status) => {
+          if (!seen.has(status)) {
+            entry.card.remove();
+            cardByStatus.delete(status);
+          }
+        });
+
+        // Keep DOM order consistent with API order.
+        stats.forEach((row) => {
+          const entry = cardByStatus.get(String(row.status));
+          if (entry) {
+            cardsEl.appendChild(entry.card);
+          }
         });
 
         lastEl.textContent = new Date().toLocaleTimeString();

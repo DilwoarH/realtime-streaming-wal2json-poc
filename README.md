@@ -2,6 +2,8 @@
 
 A minimal CDC (Change Data Capture) prototype using **PostgreSQL 17**, the **wal2json** logical decoding plugin, and **Python**.
 
+<img width="2732" height="2048" alt="localhost_8080_(iPad Pro)" src="https://github.com/user-attachments/assets/d05d9093-7ea5-4f8c-823f-88aaf2c693ac" />
+
 ## Architecture
 
 ```

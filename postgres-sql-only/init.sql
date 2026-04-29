@@ -16,14 +16,8 @@ BEGIN;
 SET lock_timeout = '30s';
 SET statement_timeout = '60s';
 
--- Sets the replica identity for the orders table to use the primary key index.
--- This determines which columns are logged to the WAL (Write-Ahead Log) when rows are updated or deleted.
--- Using the primary key as replica identity ensures that logical replication can uniquely identify rows
--- for UPDATE and DELETE operations. This is essential for WAL-based replication tools like wal2json.
--- Without this, replication would need to log all columns to identify changed rows, increasing log size.
-ALTER TABLE orders REPLICA IDENTITY USING INDEX orders_pkey;
-CREATE INDEX orders_status_idx ON orders(status); -- During normal index creation, table updates are blocked, but reads are still allowed.
-ALTER TABLE orders REPLICA IDENTITY USING INDEX orders_status_idx;
+CREATE UNIQUE INDEX orders_id_status_idx ON orders(id, status);
+ALTER TABLE orders REPLICA IDENTITY USING INDEX orders_id_status_idx;
 
 COMMIT;
 
